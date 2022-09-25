@@ -8,6 +8,7 @@ urllib.request.urlretrieve(DATA_URL, DATA_FILE)
 
 df = pd.read_csv('data\ForestFires202208.csv', encoding='utf-8', low_memory=False, date_parser=pd.to_datetime)
 df = df[['lat', 'lon', 'data_hora_gmt', 'satelite','risco_fogo', 'pais']]
+df['risco_fogo'] = df['risco_fogo'].fillna(0)
 
 df.to_csv('data\ForestFires.csv', index=False)
 os.remove('data\ForestFires202208.csv')
