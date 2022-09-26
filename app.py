@@ -3,49 +3,58 @@ import pandas as pd
 import datetime
 import pydeck as pdk
 
+st.set_page_config(layout="wide")
+
 st.title("Forest Fires worldwide 🌳🔥")
 
 @st.cache(persist = True)
 def importing_dataset ():
-    # Passing the file to pandas dataframe and formating the values types
-    df_focos = pd.read_csv('data/ForestFires.csv', encoding='utf-8')
+    # Passing the file to df_heatSpots dataframe and formating the values types
+    df_heatSpots0 = pd.read_csv('data/ForestFires0.csv', encoding='utf-8')
+    df_heatSpots1 = pd.read_csv('data/ForestFires1.csv', encoding='utf-8')
+    df_heatSpots2 = pd.read_csv('data/ForestFires2.csv', encoding='utf-8')
+    frames = [df_heatSpots0, df_heatSpots1, df_heatSpots2]
+    df_heatSpots = pd.concat(frames)
 
-    df_focos[['satelite']] = df_focos[['satelite']].astype('category')
-    df_focos[['pais']] = df_focos[['pais']].astype('category')
-    df_focos[['data_hora_gmt']] = df_focos[['data_hora_gmt']].astype('category')
+    df_heatSpots[['satelite']] = df_heatSpots[['satelite']].astype('category')
+    df_heatSpots[['pais']] = df_heatSpots[['pais']].astype('category')
+    df_heatSpots[['data_hora_gmt']] = df_heatSpots[['data_hora_gmt']].astype('category')
 
-    floats = df_focos.select_dtypes(include=['float64']).columns.tolist()
-    df_focos[floats] = df_focos[floats].astype('float32')
+    floats = df_heatSpots.select_dtypes(include=['float64']).columns.tolist()
+    df_heatSpots[floats] = df_heatSpots[floats].astype('float32')
 
-    df_focos['data_hora_gmt'] = pd.to_datetime(df_focos['data_hora_gmt'])
+    df_heatSpots['data_hora_gmt'] = pd.to_datetime(df_heatSpots['data_hora_gmt'])
 
-    return df_focos
+    return df_heatSpots
 
 def choosing_variables():
     # Date selection
-    date = st.date_input("Choose a July 2022 date",datetime.date(2022, 8, 6))
+    with st.sidebar:
+        st.sidebar.markdown("**First select the data range you want to analyze:** 👇")
+        date = st.date_input("Choose a August 2022 date",datetime.date(2022, 8, 6))
     
-    # Country selection
-    all_options_country = df_focos['pais'].unique()
-    select_country = st.multiselect("Country options (Leave blank to allow all countries)", all_options_country, ['Brasil'])
+        # Country selection
+        all_options_country = df_heatSpots['pais'].unique()
+        select_country = st.multiselect("Country options (Leave blank to allow all countries)", all_options_country, ['Brasil'])
 
-    if len(select_country) > 0:
-        temp_select_country = select_country
-    else:
-        temp_select_country = all_options_country
+        if len(select_country) > 0:
+            temp_select_country = select_country
+        else:
+            temp_select_country = all_options_country
 
-    # Satellite selection
-    all_options_satellite = df_focos['satelite'].unique()
-    select_satellite = st.multiselect("satellite options (Leave blank to allow all satellites)", all_options_satellite, ['NOAA-20'])
+        # Satellite selection
+        all_options_satellite = df_heatSpots['satelite'].unique()
+        select_satellite = st.multiselect("satellite options (Leave blank to allow all satellites)", all_options_satellite, ['NOAA-20'])
 
-    if len(select_satellite) > 0:
-        temp_select_satellite = select_satellite
-    else:
-        temp_select_satellite = all_options_satellite
+        if len(select_satellite) > 0:
+            temp_select_satellite = select_satellite
+        else:
+            temp_select_satellite = all_options_satellite
 
     return date, temp_select_country, temp_select_satellite
 
-df_focos = importing_dataset()
+
+df_heatSpots = importing_dataset()
 
 # Defining initial date country and satellite variables
 date = datetime.datetime.strptime('19082022', "%d%m%Y").date()
@@ -53,22 +62,24 @@ temp_select_country = ['Brasil']
 temp_select_satellite = ['NOAA-20']
 
 # Hidding the possible options
-if st.checkbox("Show options", True):
-    date, temp_select_country, temp_select_satellite = choosing_variables()
+date, temp_select_country, temp_select_satellite = choosing_variables()
 
-# Querying the df_focos dataframe
-df_focos = df_focos[(df_focos['data_hora_gmt'].dt.date == date) & 
-                    (df_focos['pais'].isin(temp_select_country)) &
-                    (df_focos['satelite'].isin(temp_select_satellite))]
+# Querying the df_heatSpots dataframe
+df_heatSpots = df_heatSpots[(df_heatSpots['data_hora_gmt'].dt.date == date) & 
+                    (df_heatSpots['pais'].isin(temp_select_country)) &
+                    (df_heatSpots['satelite'].isin(temp_select_satellite))]
 
 # Defining the Latitude and Longite as 0 to centre the map
 lat0=0
 lon0=0
 
+# Set the viewport location
+view_state = pdk.ViewState(latitude=lat0, longitude=lon0, zoom=1.9, bearing=0, pitch=45)
+
 # Define a layer to display on a map
 layer = pdk.Layer(
     "ColumnLayer",
-    df_focos,
+    df_heatSpots,
     get_position='[lon, lat]',
     elevation_scale=50,
     pickable=True,
@@ -80,19 +91,23 @@ layer = pdk.Layer(
     auto_highlight=True,
 )
 
-# Set the viewport location
-view_state = pdk.ViewState(latitude=lat0, longitude=lon0, zoom=0.5, bearing=0, pitch=45)
-
 # Generating tooltip for each generated point in the map with the related satellite
 tooltip = {
     "html": "satellite: <b>{satellite}</b>",
     "style": {"background": "grey", "color": "white", "font-family": '"Helvetica Neue", Arial', "z-index": "10000"},
 }
 
+print(type(tooltip))
+print(type(view_state))
+print(type(layer))
+
 # Rendering the map 
 st.pydeck_chart(pdk.Deck(
     layers=[layer],
     initial_view_state=view_state,
     map_style='mapbox://styles/mapbox/dark-v10',
-    tooltip=tooltip
+    tooltip=tooltip,
 ))
+
+print(" ")
+print(type(st.pydeck_chart))
