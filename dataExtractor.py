@@ -10,7 +10,7 @@ import numpy as np
 df = pd.read_csv('data\ForestFires.csv', encoding='utf-8', low_memory=False, date_parser=pd.to_datetime)
 print(df.info())
 
-df = df[['lat', 'lon', 'data_hora_gmt', 'satelite', 'pais']]
+df = df[['lat', 'lon', 'date_hour_gmt', 'satellite', 'country']]
 
 df_split = np.array_split(df, 3)
 
