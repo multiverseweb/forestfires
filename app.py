@@ -111,3 +111,6 @@ st.pydeck_chart(pdk.Deck(
 
 print(" ")
 print(type(st.pydeck_chart))
+
+
+# streamlit run app.py
